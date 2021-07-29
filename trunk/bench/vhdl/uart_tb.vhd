@@ -12,27 +12,27 @@ ARCHITECTURE behave OF uart_tb IS
 
     COMPONENT uart_tx IS
         GENERIC (
-            g_CLKS_PER_BIT : INTEGER := 115 -- Needs to be set correctly
+            clk_cycles_per_bit : INTEGER -- Needs to be set correctly! (See instructions in uart_rx.vhd / uart_tx.vhd)
         );
         PORT (
-            i_clk : IN STD_LOGIC;
-            i_tx_dv : IN STD_LOGIC;
-            i_tx_byte : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
-            o_tx_active : OUT STD_LOGIC;
-            o_tx_serial : OUT STD_LOGIC;
-            o_tx_done : OUT STD_LOGIC
+            clk : IN STD_LOGIC;
+            tx_dv : IN STD_LOGIC;
+            tx_byte : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+            tx_active : OUT STD_LOGIC;
+            tx_serial : OUT STD_LOGIC;
+            tx_done : OUT STD_LOGIC
         );
     END COMPONENT uart_tx;
 
     COMPONENT uart_rx IS
         GENERIC (
-            g_CLKS_PER_BIT : INTEGER := 115 -- Needs to be set correctly
+            clk_cycles_per_bit : INTEGER -- Needs to be set correctly! (See instructions in uart_rx.vhd / uart_tx.vhd)
         );
         PORT (
-            i_clk : IN STD_LOGIC;
-            i_rx_serial : IN STD_LOGIC;
-            o_rx_dv : OUT STD_LOGIC;
-            o_rx_byte : OUT STD_LOGIC_VECTOR(7 DOWNTO 0)
+            clk : IN STD_LOGIC;
+            rx_serial : IN STD_LOGIC;
+            rx_dv : OUT STD_LOGIC;
+            rx_byte : OUT STD_LOGIC_VECTOR(7 DOWNTO 0)
         );
     END COMPONENT uart_rx;
     -- Test Bench uses a 10 MHz Clock
@@ -75,34 +75,33 @@ BEGIN
     -- Instantiate UART transmitter
     UART_TX_INST : uart_tx
     GENERIC MAP(
-        g_CLKS_PER_BIT => c_CLKS_PER_BIT
+        clk_cycles_per_bit => c_CLKS_PER_BIT
     )
     PORT MAP(
-        i_clk => r_CLOCK,
-        i_tx_dv => r_TX_DV,
-        i_tx_byte => r_TX_BYTE,
-        o_tx_active => OPEN,
-        o_tx_serial => w_TX_SERIAL,
-        o_tx_done => w_TX_DONE
+        clk => r_CLOCK,
+        tx_dv => r_TX_DV,
+        tx_byte => r_TX_BYTE,
+        tx_active => OPEN,
+        tx_serial => w_TX_SERIAL,
+        tx_done => w_TX_DONE
     );
 
     -- Instantiate UART Receiver
     UART_RX_INST : uart_rx
     GENERIC MAP(
-        g_CLKS_PER_BIT => c_CLKS_PER_BIT
+        clk_cycles_per_bit => c_CLKS_PER_BIT
     )
     PORT MAP(
-        i_clk => r_CLOCK,
-        i_rx_serial => r_RX_SERIAL,
-        o_rx_dv => w_RX_DV,
-        o_rx_byte => w_RX_BYTE
+        clk => r_CLOCK,
+        rx_serial => r_RX_SERIAL,
+        rx_dv => w_RX_DV,
+        rx_byte => w_RX_BYTE
     );
 
     r_CLOCK <= NOT r_CLOCK AFTER 50 ns;
 
     PROCESS IS
     BEGIN
-
         -- Tell the UART to send a command.
         WAIT UNTIL rising_edge(r_CLOCK);
         WAIT UNTIL rising_edge(r_CLOCK);
@@ -124,7 +123,5 @@ BEGIN
         END IF;
 
         ASSERT false REPORT "Tests Complete" SEVERITY failure;
-
     END PROCESS;
-
 END behave;
