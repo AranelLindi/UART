@@ -17,7 +17,7 @@
 -- Revision 0.1 - Code implementation, formatting, commenting; not yet tested or simulated!
 ----------------------------------------------------------------------------------
 
-LIBRARY library IEEE;
+LIBRARY IEEE;
 USE IEEE.std_logic_1164.ALL;
 
 ENTITY uart_tx IS
@@ -25,7 +25,7 @@ ENTITY uart_tx IS
         -- frequency clk / frequency Uart
         -- Example: 10 MHz Clock, 115200 baud rate Uart
         -- 10000000 / 115200 = 87
-        clk_cycles_per_bit : INTEGER
+        uart_clk_cycles_per_bit : INTEGER
     );
     PORT (
         -- System clock.
@@ -59,7 +59,7 @@ ARCHITECTURE uart_tx_arch OF uart_tx IS
     SIGNAL state : state_type := S_Idle;
 
     -- Internal counters.
-    SIGNAL s_clk_count : INTEGER RANGE 0 TO (clk_cycles_per_bit - 1) := 0;
+    SIGNAL s_clk_count : INTEGER RANGE 0 TO (uart_clk_cycles_per_bit - 1) := 0;
     SIGNAL s_bit_index : INTEGER RANGE 0 TO 7 := 0; -- 8 Bits total
 
     -- Initialize outputs with standard values.
@@ -70,6 +70,7 @@ BEGIN
     uart_tx_done <= s_tx_done;
 
     PROCESS (clk)
+    BEGIN
         IF rising_edge(clk) THEN
             CASE state IS
                 WHEN S_Idle =>
@@ -92,7 +93,7 @@ BEGIN
                     uart_tx_serial <= '0';
 
                     -- Wait (clk_cycles_per_bit - 1) clock cycles for start bit to finish.
-                    IF (s_clk_count < (clk_cycles_per_bit - 1)) THEN
+                    IF (s_clk_count < (uart_clk_cycles_per_bit - 1)) THEN
                         s_clk_count <= (s_clk_count + 1);
                         state <= S_Tx_Start_Bit;
                     ELSE
@@ -104,7 +105,7 @@ BEGIN
                 WHEN S_Tx_Data_Bits =>
                     uart_tx_serial <= s_tx_data(s_bit_index);
 
-                    IF (s_clk_count < (clk_cycles_per_bit - 1)) THEN
+                    IF (s_clk_count < (uart_clk_cycles_per_bit - 1)) THEN
                         s_clk_count <= (s_clk_count + 1);
                         state <= S_Tx_Data_Bits;
                     ELSE
@@ -125,12 +126,12 @@ BEGIN
                     uart_tx_serial <= '1';
 
                     -- Wait (clk_cycles_per_bit - 1) clock cycles for Stop bit to finish.
-                    IF (s_clk_count < (clk_cycles_per_bit - 1)) THEN
+                    IF (s_clk_count < (uart_clk_cycles_per_bit - 1)) THEN
                         s_clk_count <= (s_clk_count + 1);
                         state <= S_Tx_Stop_Bit;
                     ELSE
                         s_tx_done <= '1';
-                        s_clk_count <= '0';
+                        s_clk_count <= 0;
                         state <= S_Cleanup;
                     END IF;
 

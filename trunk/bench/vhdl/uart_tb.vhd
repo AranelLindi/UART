@@ -12,27 +12,27 @@ ARCHITECTURE behave OF uart_tb IS
 
     COMPONENT uart_tx IS
         GENERIC (
-            clk_cycles_per_bit : INTEGER -- Needs to be set correctly! (See instructions in uart_rx.vhd / uart_tx.vhd)
+            uart_clk_cycles_per_bit : INTEGER -- Needs to be set correctly! (See instructions in uart_rx.vhd / uart_tx.vhd)
         );
         PORT (
             clk : IN STD_LOGIC;
-            tx_dv : IN STD_LOGIC;
-            tx_byte : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
-            tx_active : OUT STD_LOGIC;
-            tx_serial : OUT STD_LOGIC;
-            tx_done : OUT STD_LOGIC
+            uart_tx_dv : IN STD_LOGIC;
+            uart_tx_byte : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+            uart_tx_active : OUT STD_LOGIC;
+            uart_tx_serial : OUT STD_LOGIC;
+            uart_tx_done : OUT STD_LOGIC
         );
     END COMPONENT uart_tx;
 
     COMPONENT uart_rx IS
         GENERIC (
-            clk_cycles_per_bit : INTEGER -- Needs to be set correctly! (See instructions in uart_rx.vhd / uart_tx.vhd)
+            uart_clk_cycles_per_bit : INTEGER -- Needs to be set correctly! (See instructions in uart_rx.vhd / uart_tx.vhd)
         );
         PORT (
             clk : IN STD_LOGIC;
-            rx_serial : IN STD_LOGIC;
-            rx_dv : OUT STD_LOGIC;
-            rx_byte : OUT STD_LOGIC_VECTOR(7 DOWNTO 0)
+            uart_rx_serial : IN STD_LOGIC;
+            uart_rx_dv : OUT STD_LOGIC;
+            uart_rx_data : OUT STD_LOGIC_VECTOR(7 DOWNTO 0)
         );
     END COMPONENT uart_rx;
     -- Test Bench uses a 10 MHz Clock
@@ -75,27 +75,27 @@ BEGIN
     -- Instantiate UART transmitter
     UART_TX_INST : uart_tx
     GENERIC MAP(
-        clk_cycles_per_bit => c_CLKS_PER_BIT
+        uart_clk_cycles_per_bit => c_CLKS_PER_BIT
     )
     PORT MAP(
         clk => r_CLOCK,
-        tx_dv => r_TX_DV,
-        tx_byte => r_TX_BYTE,
-        tx_active => OPEN,
-        tx_serial => w_TX_SERIAL,
-        tx_done => w_TX_DONE
+        uart_tx_dv => r_TX_DV,
+        uart_tx_byte => r_TX_BYTE,
+        uart_tx_active => OPEN,
+        uart_tx_serial => w_TX_SERIAL,
+        uart_tx_done => w_TX_DONE
     );
 
     -- Instantiate UART Receiver
     UART_RX_INST : uart_rx
     GENERIC MAP(
-        clk_cycles_per_bit => c_CLKS_PER_BIT
+        uart_clk_cycles_per_bit => c_CLKS_PER_BIT
     )
     PORT MAP(
         clk => r_CLOCK,
-        rx_serial => r_RX_SERIAL,
-        rx_dv => w_RX_DV,
-        rx_byte => w_RX_BYTE
+        uart_rx_serial => r_RX_SERIAL,
+        uart_rx_dv => w_RX_DV,
+        uart_rx_data => w_RX_BYTE
     );
 
     r_CLOCK <= NOT r_CLOCK AFTER 50 ns;

@@ -17,7 +17,7 @@
 -- Revision 0.1 - Code implementation, formatting, commenting; not yet tested or simulated!
 ----------------------------------------------------------------------------------
 
-LIBRARY library IEEE;
+LIBRARY IEEE;
 USE IEEE.std_logic_1164.ALL;
 
 ENTITY uart_rx IS
@@ -54,7 +54,7 @@ ARCHITECTURE uart_rx_arch OF uart_rx IS
     SIGNAL s_rx_data : STD_LOGIC_VECTOR(1 DOWNTO 0) := (OTHERS => '0');
 
     -- Internal counters.
-    SIGNAL s_clk_count : INTEGER RANGE 0 TO (clk_cycles_per_bit - 1) := 0;
+    SIGNAL s_clk_count : INTEGER RANGE 0 TO (uart_clk_cycles_per_bit - 1) := 0;
     SIGNAL s_bit_index : INTEGER RANGE 0 TO 7 := 0; -- 8 bits total
 
     -- Initialize outputs with standard values.
@@ -82,8 +82,8 @@ BEGIN
             CASE state IS
                 WHEN S_Idle =>
                     s_rx_dv <= '0';
-                    s_clk_count <= '0';
-                    s_bit_index <= '0';
+                    s_clk_count <= 0;
+                    s_bit_index <= 0;
 
                     IF (s_rx_data(1) <= '0') THEN -- Start bit detected.
                         state <= S_Rx_Start_Bit;
@@ -93,9 +93,9 @@ BEGIN
 
                 -- Check middle of start bit to make sure its still low.
                 WHEN S_Rx_Start_Bit =>
-                    IF s_clk_count = ((clk_cycles_per_bit - 1) / 2) THEN
+                    IF s_clk_count = ((uart_clk_cycles_per_bit - 1) / 2) THEN
                         IF (s_rx_data(1) = '0') THEN
-                            s_clk_count <= '0'; -- reset counter since we found the middle.
+                            s_clk_count <= 0; -- reset counter since we found the middle.
                             state <= s_Rx_Data_Bits;
                         ELSE
                             state <= S_Idle;
@@ -105,34 +105,34 @@ BEGIN
                         state <= S_Rx_Start_Bit;
                     END IF;
 
-                -- Wait (clk_cycles_per_bit - 1) clock cycles to sample serial data.
+                -- Wait (uart_clk_cycles_per_bit - 1) clock cycles to sample serial data.
                 WHEN S_Rx_Data_Bits =>
-                    IF (s_clk_count < (clk_cycles_per_bit - 1)) THEN
+                    IF (s_clk_count < (uart_clk_cycles_per_bit - 1)) THEN
                         s_clk_count <= (s_clk_count + 1);
                         state <= s_Rx_Data_Bits;
                     ELSE
-                        s_clk_count <= '0';
+                        s_clk_count <= 0;
                         s_rx_byte(s_bit_index) <= s_rx_data(1);
 
                         -- Check if we have send out all bits.
                         IF (s_bit_index < 7) THEN
                             s_bit_index <= (s_bit_index + 1);
-                            state <= S_Rx_Start_Bits;
+                            state <= S_Rx_Start_Bit;
                         ELSE
-                            s_bit_index <= '0';
+                            s_bit_index <= 0;
                             state <= S_Rx_Stop_Bit;
                         END IF;
                     END IF;
 
                 -- Receive Stop bit. Stop bit = 1
                 WHEN S_Rx_Stop_Bit =>
-                    -- Wait (clk_cycles_per_bit - 1) clock cycles for Stop bit to finish.
-                    IF (s_clk_count < (clk_cycles_per_bit - 1)) THEN
+                    -- Wait (uart_clk_cycles_per_bit - 1) clock cycles for Stop bit to finish.
+                    IF (s_clk_count < (uart_clk_cycles_per_bit - 1)) THEN
                         s_clk_count <= (s_clk_count + 1);
                         state <= S_Rx_Stop_Bit;
                     ELSE
                         s_rx_dv <= '1';
-                        s_clk_count <= '0';
+                        s_clk_count <= 0;
                         state <= S_Cleanup;
                     END IF;
 
