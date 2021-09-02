@@ -10,7 +10,7 @@
 -- Tool Versions: based on code from: https://www.nandland.com/vhdl/modules/module-uart-serial-port-rs232.html
 -- Description: This file contains the Uart Transmitter. This transmitter is able to transmit
 -- 8 bits of serial data, one start bit, one stop bit and no parity bit. When transmit is
--- complete uart_tx_done will be driven 'High' for one clock cycle.
+-- complete txdone will be driven 'High' for one clock cycle.
 -- Dependencies: none
 -- 
 -- Revision:
@@ -25,7 +25,7 @@ ENTITY uart_tx IS
         -- frequency clk / frequency Uart
         -- Example: 10 MHz Clock, 115200 baud rate Uart
         -- 10000000 / 115200 = 87
-        uart_clk_cycles_per_bit : INTEGER
+        clk_cycles_per_bit : INTEGER
     );
     PORT (
         -- System clock.
@@ -33,21 +33,21 @@ ENTITY uart_tx IS
 
         -- 'High' if transmitter shall start to send tx_byte.
         -- 'Low' when nothing should be send.
-        uart_tx_dv : IN STD_LOGIC;
+        txwrite : IN STD_LOGIC;
 
         -- Data byte to be send.
-        uart_tx_byte : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+        txdata : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
 
         -- 'High' if transmitting process has started.
         -- 'Low' when system is in idle mode.
-        uart_tx_active : OUT STD_LOGIC;
+        txactive : OUT STD_LOGIC;
 
         -- Outgoing serial data stream.
-        uart_tx_serial : OUT STD_LOGIC;
+        txstream : OUT STD_LOGIC;
 
         -- 'High' if transmitting process for one byte is complete.
         -- 'Low' when transmitter is in idle or transmitting mode.
-        uart_tx_done : OUT STD_LOGIC
+        txdone : OUT STD_LOGIC
     );
 END uart_tx;
 
@@ -59,29 +59,29 @@ ARCHITECTURE uart_tx_arch OF uart_tx IS
     SIGNAL state : state_type := S_Idle;
 
     -- Internal counters.
-    SIGNAL s_clk_count : INTEGER RANGE 0 TO (uart_clk_cycles_per_bit - 1) := 0;
+    SIGNAL s_clk_count : INTEGER RANGE 0 TO (clk_cycles_per_bit - 1) := 0;
     SIGNAL s_bit_index : INTEGER RANGE 0 TO 7 := 0; -- 8 Bits total
 
     -- Initialize outputs with standard values.
-    SIGNAL s_tx_data : STD_LOGIC_VECTOR(7 DOWNTO 0) := (OTHERS => '0');
-    SIGNAL s_tx_done : STD_LOGIC := '0';
+    SIGNAL s_txdata : STD_LOGIC_VECTOR(7 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL s_txdone : STD_LOGIC := '0';
 BEGIN
     -- Drive other output.
-    uart_tx_done <= s_tx_done;
+    txdone <= s_txdone;
 
     PROCESS (clk)
     BEGIN
         IF rising_edge(clk) THEN
             CASE state IS
                 WHEN S_Idle =>
-                    uart_tx_active <= '0';
-                    uart_tx_serial <= '1'; -- Drive line 'High' for Idle.
-                    s_tx_done <= '0';
+                    txactive <= '0';
+                    txstream <= '1'; -- Drive line 'High' for Idle.
+                    s_txdone <= '0';
                     s_clk_count <= 0;
                     s_bit_index <= 0;
 
-                    IF (uart_tx_dv = '1') THEN
-                        s_tx_data <= uart_tx_byte;
+                    IF (txwrite = '1') THEN
+                        s_txdata <= txdata;
                         state <= S_Tx_Start_Bit;
                     ELSE
                         state <= S_Idle;
@@ -89,11 +89,11 @@ BEGIN
 
                 -- Send out Start Bit. Start bit = 0
                 WHEN S_Tx_Start_Bit =>
-                    uart_tx_active <= '1';
-                    uart_tx_serial <= '0';
+                    txactive <= '1';
+                    txstream <= '0';
 
                     -- Wait (clk_cycles_per_bit - 1) clock cycles for start bit to finish.
-                    IF (s_clk_count < (uart_clk_cycles_per_bit - 1)) THEN
+                    IF (s_clk_count < (clk_cycles_per_bit - 1)) THEN
                         s_clk_count <= (s_clk_count + 1);
                         state <= S_Tx_Start_Bit;
                     ELSE
@@ -103,9 +103,9 @@ BEGIN
 
                 -- Wait (clk_cycles_per_bit - 1) clock cycles for data bits to finish.
                 WHEN S_Tx_Data_Bits =>
-                    uart_tx_serial <= s_tx_data(s_bit_index);
+                    txstream <= s_txdata(s_bit_index);
 
-                    IF (s_clk_count < (uart_clk_cycles_per_bit - 1)) THEN
+                    IF (s_clk_count < clk_cycles_per_bit - 1) THEN
                         s_clk_count <= (s_clk_count + 1);
                         state <= S_Tx_Data_Bits;
                     ELSE
@@ -123,22 +123,25 @@ BEGIN
 
                 -- Send out Stop bit. Stop bit = 1
                 WHEN S_Tx_Stop_Bit =>
-                    uart_tx_serial <= '1';
+                    txstream <= '1';
 
                     -- Wait (clk_cycles_per_bit - 1) clock cycles for Stop bit to finish.
-                    IF (s_clk_count < (uart_clk_cycles_per_bit - 1)) THEN
+                    IF (s_clk_count < (clk_cycles_per_bit - 1)) THEN
                         s_clk_count <= (s_clk_count + 1);
                         state <= S_Tx_Stop_Bit;
                     ELSE
-                        s_tx_done <= '1';
+                        s_txdone <= '1';
                         s_clk_count <= 0;
                         state <= S_Cleanup;
                     END IF;
 
                 -- Stay here for one clk cycle.
                 WHEN S_Cleanup =>
-                    uart_tx_active <= '0';
-                    s_tx_done <= '1';
+                    txactive <= '0';
+                    s_txdone <= '1';
+                    state <= S_Idle;
+                    
+                when others =>
                     state <= S_Idle;
             END CASE;
         END IF;
